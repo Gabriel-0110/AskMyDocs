@@ -59,12 +59,16 @@ class RAGAgent:
                 similarity_threshold=settings.similarity_threshold,
             )
 
-            logger.info(f"Found {len(results)} relevant chunks with threshold {settings.similarity_threshold}")
-            
+            logger.info(
+                f"Found {len(results)} relevant chunks with threshold {settings.similarity_threshold}"
+            )
+
             # Convert to DocumentChunk objects
             sources = []
             for result in results:
-                logger.info(f"Chunk similarity: {result.get('similarity', 'N/A')} from {result.get('document_filename', 'Unknown')}")
+                logger.info(
+                    f"Chunk similarity: {result.get('similarity', 'N/A')} from {result.get('document_filename', 'Unknown')}"
+                )
                 chunk = DocumentChunk(
                     content=result["content"],
                     document_id=result["document_id"],
@@ -77,10 +81,12 @@ class RAGAgent:
             context = "\\n\\n".join(
                 [f"Source ({s.source_document}): {s.content}" for s in sources]
             )
-            
+
             logger.info(f"Context length: {len(context)} characters")
             if not context.strip():
-                logger.warning("No context found for question - returning generic response")
+                logger.warning(
+                    "No context found for question - returning generic response"
+                )
 
             response = self.client.chat.completions.create(
                 model="gpt-4o",

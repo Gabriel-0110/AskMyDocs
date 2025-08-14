@@ -8,23 +8,30 @@ import sys
 import subprocess
 from pathlib import Path
 
+
 def main():
     """Launch the Streamlit application."""
     # Get the path to the app.py file
     app_path = Path(__file__).parent / "app.py"
-    
+
     # Run streamlit with the app
     cmd = [
-        sys.executable, "-m", "streamlit", "run", 
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
         str(app_path),
-        "--server.address", "localhost",
-        "--server.port", "8502",
-        "--theme.base", "light"
+        "--server.address",
+        "localhost",
+        "--server.port",
+        "8502",
+        "--theme.base",
+        "dark",
     ]
-    
+
     print("Starting RAG System...")
     print(f"Command: {' '.join(cmd)}")
-    
+
     try:
         subprocess.run(cmd, check=True)
     except KeyboardInterrupt:
@@ -32,6 +39,7 @@ def main():
     except subprocess.CalledProcessError as e:
         print(f"Error running application: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

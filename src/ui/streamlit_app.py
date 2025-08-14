@@ -264,7 +264,15 @@ class RAGStreamlitApp:
 
             return {
                 "answer": response.answer,
-                "sources": response.sources,
+                "sources": [
+                    {
+                        "source_document": source.source_document,
+                        "content": source.content,
+                        "similarity": source.similarity,
+                        "document_id": source.document_id,
+                    }
+                    for source in response.sources
+                ],
                 "confidence": response.confidence,
                 "reasoning": response.reasoning,
                 "processing_time": processing_time,
