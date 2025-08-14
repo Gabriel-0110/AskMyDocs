@@ -1,0 +1,33 @@
+# RAG System Dependencies
+
+# Core framework
+pydantic-ai==0.0.14
+streamlit>=1.28.0
+
+# Database
+supabase>=2.0.0
+pgvector>=0.2.0
+
+# AI/ML
+openai>=1.0.0
+tiktoken>=0.5.0
+
+# Document processing
+pypdf2>=3.0.0
+python-magic>=0.4.27
+
+# Environment management
+python-dotenv>=1.0.0
+
+# Utilities
+asyncio-throttle>=1.0.0
+tenacity>=8.2.0
+pydantic>=2.0.0
+
+# Development and testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+ruff>=0.1.0
+
+os>=0.1.0
