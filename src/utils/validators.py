@@ -4,12 +4,10 @@ Provides comprehensive validation for documents, embeddings, and system componen
 """
 
 import logging
-import re
-import hashlib
-from typing import List, Dict, Any, Optional, Set, Union, Tuple
+import time
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 from dataclasses import dataclass
-import mimetypes
 
 from config.settings import settings
 
@@ -19,7 +17,7 @@ logger = logging.getLogger(__name__)
 class ValidationError(Exception):
     """Custom exception for validation errors."""
 
-    def __init__(self, message: str, code: str = None, details: Dict[str, Any] = None):
+    def __init__(self, message: str, code: Optional[str] = None, details: Optional[Dict[str, Any]] = None):
         super().__init__(message)
         self.code = code
         self.details = details or {}
@@ -34,7 +32,7 @@ class ValidationResult:
     warnings: List[str]
     details: Dict[str, Any]
 
-    def add_error(self, error: str, code: str = None):
+    def add_error(self, error: str, code: Optional[str] = None):
         """Add an error to the result."""
         self.valid = False
         self.errors.append(error)
@@ -311,7 +309,7 @@ class EmbeddingValidator:
 
     def __init__(self):
         """Initialize the embedding validator."""
-        self.expected_dimensions = settings.get_embedding_dimensions()
+        self.expected_dimensions = settings.embedding_dimensions
         self.reasonable_value_range = (-10.0, 10.0)
         self.zero_tolerance = 1e-10
 
@@ -572,4 +570,3 @@ def validate_embedding_vector(embedding: List[float]) -> bool:
 
 
 # Import time for timestamp
-import time
