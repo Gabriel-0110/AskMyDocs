@@ -35,6 +35,10 @@ st.set_page_config(
 
 # Import and run the Streamlit UI directly
 try:
+    # Test critical imports first
+    import tiktoken  # Test tiktoken specifically
+    import openai
+    import supabase
     from src.ui.streamlit_app import RAGStreamlitApp
 
     # Create and run the app
@@ -42,10 +46,30 @@ try:
     app.run()
 
 except ImportError as e:
-    st.error(f"Failed to import required modules: {e}")
-    st.info(
-        "Make sure all dependencies are installed and the project structure is correct."
-    )
+    st.error(f"❌ Failed to import required modules: {e}")
+    st.info("**Troubleshooting Steps:**")
+    st.info("1. Make sure all dependencies are installed")
+    st.info("2. Check that requirements.txt includes all needed packages")
+    st.info("3. For Streamlit Cloud: Try restarting the app deployment")
+    
+    # Show debug information
+    with st.expander("🔍 Debug Information"):
+        st.code(f"Python version: {sys.version}")
+        st.code(f"Python path: {sys.path[:3]}...")  # Show first few paths
+        
+        # Try to import each critical package individually
+        critical_packages = ['tiktoken', 'openai', 'supabase', 'streamlit', 'pydantic']
+        for pkg in critical_packages:
+            try:
+                __import__(pkg)
+                st.success(f"✅ {pkg} - OK")
+            except ImportError as pkg_error:
+                st.error(f"❌ {pkg} - {pkg_error}")
+                
 except Exception as e:
-    st.error(f"Application error: {e}")
+    st.error(f"❌ Application error: {e}")
     st.info("Please check the logs for more details.")
+    
+    with st.expander("🔍 Error Details"):
+        import traceback
+        st.code(traceback.format_exc())
