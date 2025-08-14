@@ -19,15 +19,18 @@ python-magic>=0.4.27
 # Environment management
 python-dotenv>=1.0.0
 
+# HTTP requests and async support
+httpx>=0.24.0
+aiofiles>=23.0.0
+
 # Utilities
 asyncio-throttle>=1.0.0
 tenacity>=8.2.0
 pydantic>=2.0.0
+pydantic-settings>=2.10.1
 
 # Development and testing
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
 black>=23.0.0
 ruff>=0.1.0
-
-os>=0.1.0
