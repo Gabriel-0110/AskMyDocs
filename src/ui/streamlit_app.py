@@ -34,6 +34,53 @@ class RAGStreamlitApp:
             initial_sidebar_state="expanded",
         )
 
+        # Custom CSS to make sidebar wider
+        st.markdown("""
+        <style>
+        .css-1d391kg {
+            width: 30rem !important;
+        }
+        .css-1lcbmhc {
+            max-width: 30rem !important;
+        }
+        .css-17eq0hr {
+            width: 30rem !important;
+        }
+        /* Sidebar width for different Streamlit versions */
+        section[data-testid="stSidebar"] > div:first-child {
+            width: 30rem !important;
+        }
+        section[data-testid="stSidebar"] {
+            width: 30rem !important;
+        }
+        /* Adjust main content margin */
+        .main .block-container {
+            margin-left: 31rem !important;
+            max-width: calc(100% - 32rem) !important;
+        }
+        /* Improve sidebar content spacing */
+        .css-1d391kg .css-1v0mbdj {
+            padding-top: 1rem;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
+        /* Make sidebar text more readable */
+        .css-1d391kg .css-1v0mbdj p {
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        /* Better file uploader styling */
+        .css-1d391kg .stFileUploader {
+            margin-bottom: 1rem;
+        }
+        /* Improve expander spacing */
+        .css-1d391kg .streamlit-expanderHeader {
+            font-size: 0.9rem !important;
+            padding: 0.5rem !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
         st.title("📚 Document-Based RAG System")
         st.markdown(
             "Upload documents and ask questions to get AI-powered answers with source attribution."
@@ -74,13 +121,12 @@ class RAGStreamlitApp:
                 if uploaded_file not in [
                     doc.get("file_obj") for doc in st.session_state.documents
                 ]:
-                    col1, col2 = st.sidebar.columns([3, 1])
-                    with col1:
-                        st.write(f"📄 {uploaded_file.name}")
-                        st.write(f"Size: {uploaded_file.size:,} bytes")
-                    with col2:
-                        if st.button("Process", key=f"process_{uploaded_file.name}"):
-                            self._process_uploaded_file(uploaded_file)
+                    # Use full width for better display
+                    st.sidebar.write(f"📄 **{uploaded_file.name}**")
+                    st.sidebar.write(f"📏 Size: {uploaded_file.size:,} bytes")
+                    if st.sidebar.button("🚀 Process Document", key=f"process_{uploaded_file.name}", use_container_width=True):
+                        self._process_uploaded_file(uploaded_file)
+                    st.sidebar.divider()
 
         # Display processed documents
         st.sidebar.subheader("📚 Knowledge Base")
@@ -122,6 +168,7 @@ class RAGStreamlitApp:
                 else 0
             )
 
+            # Display stats in a more readable format
             col1, col2 = st.sidebar.columns(2)
             with col1:
                 st.metric("Total Docs", total_docs)

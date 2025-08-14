@@ -19,22 +19,30 @@ try:
 except ImportError:
     pass  # In production, secrets are handled by Streamlit Cloud
 
-# Import app after path setup
-from app import main
+# Set page config first (must be at top level for Streamlit Cloud)
+st.set_page_config(
+    page_title="AskMyDocs - AI Document Q&A",
+    page_icon="📚",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/Gabriel-0110/AskMyDocs',
+        'Report a bug': 'https://github.com/Gabriel-0110/AskMyDocs/issues',
+        'About': "# AskMyDocs\nAI-powered document Q&A system built with Streamlit, OpenAI, and Supabase."
+    }
+)
 
-if __name__ == "__main__":
-    # Set page config first
-    st.set_page_config(
-        page_title="AskMyDocs - AI Document Q&A",
-        page_icon="📚",
-        layout="wide",
-        initial_sidebar_state="expanded",
-        menu_items={
-            'Get Help': 'https://github.com/Gabriel-0110/AskMyDocs',
-            'Report a bug': 'https://github.com/Gabriel-0110/AskMyDocs/issues',
-            'About': "# AskMyDocs\nAI-powered document Q&A system built with Streamlit, OpenAI, and Supabase."
-        }
-    )
+# Import and run the Streamlit UI directly
+try:
+    from src.ui.streamlit_app import RAGStreamlitApp
     
-    # Run the main application
-    main()
+    # Create and run the app
+    app = RAGStreamlitApp()
+    app.run()
+    
+except ImportError as e:
+    st.error(f"Failed to import required modules: {e}")
+    st.info("Make sure all dependencies are installed and the project structure is correct.")
+except Exception as e:
+    st.error(f"Application error: {e}")
+    st.info("Please check the logs for more details.")

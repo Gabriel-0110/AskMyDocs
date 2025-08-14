@@ -1,1 +1,10 @@
-python = \"^3.11\"\n[build-system]\nrequires = [\"setuptools\", \"wheel\"]\nbuild-backend = \"setuptools.build_meta\"\n\n[tool.streamlit]\n[tool.streamlit.server]\nport = 8501\nheadless = true\n\n[tool.streamlit.theme]\nbase = \"dark\"\nprimaryColor = \"#ff6b6b\"\nbackgroundColor = \"#0e1117\"\nsecondaryBackgroundColor = \"#262730\"\ntextColor = \"#fafafa\"
+[server]
+port = 8501
+headless = true
+
+[theme]
+base = "dark"
+primaryColor = "#ff6b6b"
+backgroundColor = "#0e1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#fafafa"
