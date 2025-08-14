@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(uv init:*)",
+      "Bash(uv add:*)",
+      "Bash(cp:*)",
+      "Bash(find:*)",
+      "Bash(test:*)",
+      "Bash(mkdir:*)",
+      "Bash(uv run:*)"
+    ],
+    "defaultMode": "acceptEdits"
+  }
+}
