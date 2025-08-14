@@ -10,7 +10,6 @@ pgvector>=0.2.0
 
 # AI/ML
 openai>=1.0.0
-tiktoken>=0.5.0
 
 # Document processing
 pypdf2>=3.0.0
@@ -34,3 +33,6 @@ pytest>=7.4.0
 pytest-asyncio>=0.21.0
 black>=23.0.0
 ruff>=0.1.0
+
+# AI/ML dependencies
+tiktoken>=0.5.0
