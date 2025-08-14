@@ -33,3 +33,4 @@ os>=0.1.0
 
 # UI
 streamlit
+tiktoken
