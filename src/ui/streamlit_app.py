@@ -35,7 +35,8 @@ class RAGStreamlitApp:
         )
 
         # Custom CSS to make sidebar wider
-        st.markdown("""
+        st.markdown(
+            """
         <style>
         .css-1d391kg {
             width: 30rem !important;
@@ -79,7 +80,9 @@ class RAGStreamlitApp:
             padding: 0.5rem !important;
         }
         </style>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         st.title("📚 Document-Based RAG System")
         st.markdown(
@@ -124,7 +127,11 @@ class RAGStreamlitApp:
                     # Use full width for better display
                     st.sidebar.write(f"📄 **{uploaded_file.name}**")
                     st.sidebar.write(f"📏 Size: {uploaded_file.size:,} bytes")
-                    if st.sidebar.button("🚀 Process Document", key=f"process_{uploaded_file.name}", use_container_width=True):
+                    if st.sidebar.button(
+                        "🚀 Process Document",
+                        key=f"process_{uploaded_file.name}",
+                        use_container_width=True,
+                    ):
                         self._process_uploaded_file(uploaded_file)
                     st.sidebar.divider()
 
