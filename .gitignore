@@ -83,3 +83,7 @@ antenv/
 .python_packages/
 __pycache__/
 app.zip
+# artifacts
+*.zip
+.python_packages/
+
