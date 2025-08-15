@@ -43,9 +43,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_546DB718B6B54D82BBA2FE579F0F808C }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E3BB5974703147E1A26C4B4E3F50B9C3 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B26783C90B6E4A2FA6186547B80688B6 }}
           
       # Deploy the repo contents (including vendored deps) to the Web App
       - name: Deploy to Azure Web App
@@ -55,4 +55,5 @@ jobs:
           app-name: 'askmydocs'
           slot-name: 'Production'
           package: .
+
 
