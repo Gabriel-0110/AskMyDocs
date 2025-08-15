@@ -16,27 +16,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name:  Set up Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       # Install uv and add to PATH
       - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        run: pip install uv
 
       # Preinstall all deps into the folder Azure can use at runtime
       # (so we don't need pip/venv in App Service)
-      - name: Install dependencies with uv (vendor)
-        run: uv pip install --python 3.13 --target ".python_packages/lib/site-packages" -r requirements.txt
+      - name: Install dependencies with uv
+        run: uv pip install --system -r requirements.txt
 
       # Produce requirements.txt from your uv/pyproject lock for Oryx
       - name: Export requirements with uv
-        run: |
-          uv export --format requirements-txt --no-hashes --output-file requirements.txt
+        run: uv export --format requirements-txt --no-hashes --output-file requirements.txt
 
       # Ensure startup script is executable if present
       - name: Ensure startup.sh is executable
-        run: |
-          if [ -f startup.sh ]; then chmod +x startup.sh; fi
-          
+        run: chmod +x startup.sh
+
       # Login to Azure using Secrets saved on Settings
       - name: Login to Azure
         uses: azure/login@v2
@@ -44,10 +45,11 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
-
+          
       # Deploy the repo contents (including vendored deps) to the Web App
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
         with:
           app-name: 'askmydocs'
           slot-name: 'Production'
