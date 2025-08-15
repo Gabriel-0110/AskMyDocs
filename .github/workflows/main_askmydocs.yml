@@ -36,7 +36,8 @@ jobs:
 
       # Ensure startup script is executable if present
       - name: Ensure startup.sh is executable
-        run: chmod +x startup.sh
+        run: |
+          if [ -f startup.sh ]; then chmod +x startup.sh; fi
 
       # Login to Azure using Secrets saved on Settings
       - name: Login to Azure
@@ -54,3 +55,4 @@ jobs:
           app-name: 'askmydocs'
           slot-name: 'Production'
           package: .
+
