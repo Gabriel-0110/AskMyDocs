@@ -68,16 +68,7 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_546DB718B6B54D82BBA2FE579F0F808C }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E3BB5974703147E1A26C4B4E3F50B9C3 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B26783C90B6E4A2FA6186547B80688B6 }}
-  
-        # Disable Oryx to avoid package issue (pip & uv)
-       - name: Disable Oryx build
-         run: |
-           az webapp config appsettings set \
-           --name askmydocs \
-           --resource-group RG-Apps \
-           --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false ORYX_DISABLE_PYTHON_BUILD=true \
-           PYTHONPATH=/home/site/wwwroot/.python_packages/lib/site-packages
-            
+             
         # Deploy the repo contents (including vendored deps) to the Web App
        - name: Deploy to Azure Web App
          uses: azure/webapps-deploy@v3
@@ -85,4 +76,5 @@ jobs:
          with:
            app-name: 'askmydocs'
            slot-name: 'Production'
+
            package: .
