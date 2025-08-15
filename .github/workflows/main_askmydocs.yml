@@ -2,63 +2,80 @@ name: Build and deploy Python app to Azure Web App - askmydocs
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
+      id-token: write      # for azure/login (OIDC)
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set up Python version
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Create and start virtual environment
+      # Install uv and add to PATH
+      - name: Install uv
         run: |
-          python -m venv venv
-          source venv/bin/activate
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      # Preinstall all deps into the folder Azure can use at runtime
+      # (so we don't need pip/venv in App Service)
+      - name: Install dependencies with uv (vendor)
+        run: uv pip install --python 3.13 --target ".python_packages/lib/site-packages" -r requirements.txt
 
-      - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-app
-          path: |
-            .
-            !venv/
+      # Ensure startup script is executable if present
+      - name: Ensure startup.sh is executable
+        run: |
+          if [ -f startup.sh ]; then chmod +x startup.sh; fi
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: python-app
+      # (Optional) Smoke-check imports (fast) — skip if you want
+      - name: Quick import check
+        run: |
+          python - <<'PY'
+          import sys, os
+          sys.path.insert(0, os.path.abspath(".python_packages/lib/site-packages"))
+          print("OK: site-packages ready")
+          PY
 
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_546DB718B6B54D82BBA2FE579F0F808C }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E3BB5974703147E1A26C4B4E3F50B9C3 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B26783C90B6E4A2FA6186547B80688B6 }}
 
+      # Discover the resource group automatically (no hard-coded RG)
+      - name: Get Resource Group of Web App
+        id: rg
+        run: |
+          RG=$(az webapp show -n askmydocs --query resourceGroup -o tsv)
+          echo "rg=$RG" >> $GITHUB_OUTPUT
+
+      # Disable Oryx build so Azure won't run pip
+      - name: Disable Oryx build and set PYTHONPATH
+        run: |
+          az webapp config appsettings set \
+            --name askmydocs \
+            --resource-group "${{ steps.rg.outputs.rg }}" \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false ORYX_DISABLE_PYTHON_BUILD=true \
+                       PYTHONPATH=/home/site/wwwroot/.python_packages/lib/site-packages
+
+      # Set the startup command to your script (no pip/venv involved)
+      - name: Set startup command
+        run: |
+          az webapp config set \
+            --name askmydocs \
+            --resource-group "${{ steps.rg.outputs.rg }}" \
+            --startup-file "./startup.sh"
+
+      # Deploy the repo contents (including vendored deps) to the Web App
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
         with:
           app-name: 'askmydocs'
           slot-name: 'Production'
+          package: .
