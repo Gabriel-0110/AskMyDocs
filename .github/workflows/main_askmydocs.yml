@@ -28,7 +28,7 @@ jobs:
       # Preinstall all deps into the folder Azure can use at runtime
       # (so we don't need pip/venv in App Service)
       - name: Install dependencies with uv
-        run: uv pip install --system -r requirements.txt
+        run: uv pip install --system --target ".python_packages/lib/site-packages" -r requirements.txt
 
       # Produce requirements.txt from your uv/pyproject lock for Oryx
       - name: Export requirements with uv
@@ -55,5 +55,6 @@ jobs:
           app-name: 'askmydocs'
           slot-name: 'Production'
           package: .
+
 
 
