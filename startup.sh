@@ -8,5 +8,5 @@ export PATH="$HOME/.cargo/bin:$PATH"
 # Install dependencies using uv
 uv pip install -r requirements.txt
 
-# Start Streamlit
-streamlit run app.py --server.port=8000 --server.address=0.0.0.0
+# Start your app
+python run.py
