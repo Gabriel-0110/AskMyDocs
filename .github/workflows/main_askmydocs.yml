@@ -1,22 +1,22 @@
 name: Build and deploy Python app to Azure Web App - askmydocs
 
+# Step 1: Github Deployment to Artifacts
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write      # for azure/login (OIDC)
       contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name:  Set up Python version
+      - name:  Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -39,22 +39,54 @@ jobs:
         run: |
           if [ -f startup.sh ]; then chmod +x startup.sh; fi
 
-      # Login to Azure using Secrets saved on Settings
-      - name: Login to Azure
-        uses: azure/login@v2
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: askmydocs-build
+          path: .
+          
+  deploy:
+      runs-on: ubuntu-latest
+      needs: build
+      permissions:
+        id-token: write
+        contents: read
+
+# End of Step 1: Prepare for Azure Deployment
+
+      steps:
+       - name: Download artifact
+         uses: actions/download-artifact@v4
+         with:
+           name: askmydocs-build
+           path: .
+            
+        # Login to Azure using Secrets saved on Settings
+       - name: Login to Azure
+         uses: azure/login@v2
+         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_546DB718B6B54D82BBA2FE579F0F808C }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E3BB5974703147E1A26C4B4E3F50B9C3 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B26783C90B6E4A2FA6186547B80688B6 }}
-          
-      # Deploy the repo contents (including vendored deps) to the Web App
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
-        with:
-          app-name: 'askmydocs'
-          slot-name: 'Production'
-          package: .
-
-
-
+  
+        # Disable Oryx to avoid package issue (pip & uv)
+       - name: Disable Oryx build
+         run: |
+           az webapp config appsettings set \
+           --name askmydocs \
+           --resource-group $(az webapp show -n askmydocs --query resourceGroup -o tsv) \
+           --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false ORYX_DISABLE_PYTHON_BUILD=true \
+           PYTHONPATH=/home/site/wwwroot/.python_packages/lib/site-packages
+            
+        # Deploy the repo contents (including vendored deps) to the Web App
+       - name: Deploy to Azure Web App
+         uses: azure/webapps-deploy@v3
+         id: deploy-to-webapp
+         with:
+           app-name: 'askmydocs'
+           slot-name: 'Production'
+           package: .
+  
+  
+  
+  
