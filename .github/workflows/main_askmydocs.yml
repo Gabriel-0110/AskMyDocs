@@ -28,7 +28,9 @@ jobs:
           source venv/bin/activate
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install uv
+          uv pip install --system -r requirements.txt
 
       - name: Make startup.sh executable
         run: chmod +x startup.sh
@@ -46,3 +48,4 @@ jobs:
           app-name: 'askmydocs'
           slot-name: 'Production'
           package: .
+
