@@ -15,27 +15,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python version
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
       - name: Install uv
-        run: pip install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        env:
+          UV_INSTALL_DIR: $HOME/.cargo/bin
 
-      - name: Install dependencies
-        run: uv pip install --system -r requirements.txt
+      - name: Add uv to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Make startup.sh executable
-        run: chmod +x startup.sh
+      - name: Install dependencies with uv
+        run: uv pip install --target ".python_packages/lib/site-packages" -r requirements.txt
 
-      - name: Upload artifact for deployment jobs
+      - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: python-app
           path: |
             .
+            !.git/
             !venv/
+            !__pycache__/
 
   deploy:
     runs-on: ubuntu-latest
@@ -53,13 +52,18 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_546DB718B6B54D82BBA2FE579F0F808C }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E3BB5974703147E1A26C4B4E3F50B9C3 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B26783C90B6E4A2FA6186547B80688B6 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
+
+      - name: Disable Oryx build (skip pip install in Azure)
+        run: az webapp config appsettings set \
+              --name askmydocs \
+              --resource-group <YOUR_RESOURCE_GROUP> \
+              --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
         with:
           app-name: 'askmydocs'
           slot-name: 'Production'
