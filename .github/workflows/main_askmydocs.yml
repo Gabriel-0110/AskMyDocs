@@ -74,7 +74,7 @@ jobs:
          run: |
            az webapp config appsettings set \
            --name askmydocs \
-           --resource-group $(az webapp show -n askmydocs --query resourceGroup -o tsv) \
+           --resource-group RG-Apps \
            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false ORYX_DISABLE_PYTHON_BUILD=true \
            PYTHONPATH=/home/site/wwwroot/.python_packages/lib/site-packages
             
@@ -90,3 +90,4 @@ jobs:
   
   
   
+
