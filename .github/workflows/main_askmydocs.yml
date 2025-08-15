@@ -22,30 +22,30 @@ jobs:
 
       # Build a slim deploy bundle (avoid venvs, caches, logs, zips, etc.)
       - name: Build deploy bundle
+        shell: bash
         run: |
-          set -e
-          rm -rf deploy
-          mkdir deploy
-          rsync -a . deploy \
-            --exclude '.git' \
-            --exclude '.github' \
-            --exclude '.gitignore' \
-            --exclude '.gitattributes' \
-            --exclude '.env' \
-            --exclude '*.log' \
-            --exclude '*.zip' \
-            --exclude 'antenv' \
-            --exclude 'venv' \
-            --exclude '.venv' \
-            --exclude 'env' \
-            --exclude '__pycache__' \
-            --exclude '.python_packages' \
-            --exclude 'node_modules'
-            --exclude '.devcontainer'
-          # Ensure correct runtime is present (3.12)
-          if [ ! -f deploy/runtime.txt ]; then echo 'python-3.12' > deploy/runtime.txt; fi
-          # Make startup executable if present
-          if [ -f deploy/startup.sh ]; then chmod +x deploy/startup.sh; fi
+          set -euo pipefail
+          rm -rf deploy && mkdir deploy
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.devcontainer' \
+            --exclude='.gitignore' \
+            --exclude='.gitattributes' \
+            --exclude='.env' \
+            --exclude='*.log' \
+            --exclude='*.zip' \
+            --exclude='antenv' \
+            --exclude='venv' \
+            --exclude='.venv' \
+            --exclude='env' \
+            --exclude='__pycache__' \
+            --exclude='.python_packages' \
+            --exclude='node_modules' \
+            . deploy
+          # Ensure runtime/startup
+          echo 'python-3.12' > deploy/runtime.txt
+          [ -f deploy/startup.sh ] && chmod +x deploy/startup.sh
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
