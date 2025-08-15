@@ -42,16 +42,14 @@ jobs:
             --exclude='__pycache__' \
             --exclude='.python_packages' \
             --exclude='node_modules' \
+            --exclude='oryx-manifest.toml' \
+            --exclude='output.tar.gz' \
+            --exclude='.oryx' \
             . deploy
 
           echo 'python-3.12' > deploy/runtime.txt
-
-          # Normalize line endings + ensure executable
           sudo apt-get update -y && sudo apt-get install -y dos2unix
-          if [ -f deploy/startup.sh ]; then
-            dos2unix deploy/startup.sh || true
-            chmod +x deploy/startup.sh
-          fi
+          [ -f deploy/startup.sh ] && dos2unix deploy/startup.sh && chmod +x deploy/startup.sh
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
