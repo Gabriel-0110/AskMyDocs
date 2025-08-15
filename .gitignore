@@ -82,3 +82,4 @@ pyproject.toml
 antenv/
 .python_packages/
 __pycache__/
+app.zip
