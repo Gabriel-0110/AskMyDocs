@@ -86,8 +86,3 @@ jobs:
            app-name: 'askmydocs'
            slot-name: 'Production'
            package: .
-  
-  
-  
-  
-

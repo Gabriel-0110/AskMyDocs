@@ -76,3 +76,5 @@ temp/
 # UV
 .venv/
 uv.lock
+pyproject.toml
+.streamlit/secrets.toml
