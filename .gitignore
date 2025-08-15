@@ -87,3 +87,8 @@ app.zip
 *.zip
 .python_packages/
 
+
+# artifacts
+*.zip
+.python_packages/
+
