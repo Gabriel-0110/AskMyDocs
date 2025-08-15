@@ -78,3 +78,7 @@ temp/
 uv.lock
 pyproject.toml
 .streamlit/secrets.toml
+
+antenv/
+.python_packages/
+__pycache__/
