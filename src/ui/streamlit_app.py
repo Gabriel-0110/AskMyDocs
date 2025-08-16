@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 import streamlit as st
+import warnings
+warnings.filterwarnings("ignore", category=SyntaxWarning, module=r"streamlit\..*")
 
 # ----- Robust import path handling (works when run from repo root) -----
 try:
-    # Try normal absolute imports
     from src.ingestion.orchestrator import DocumentOrchestrator  # type: ignore
     from src.generation.agent import RAGAgent  # type: ignore
     from src.database.client import SupabaseClient  # type: ignore
@@ -29,10 +30,8 @@ except ModuleNotFoundError:
 logger = get_logger(__name__)
 
 
-# ---------- Cache heavy singletons so they don't rebuild on each run ----------
 @st.cache_resource(show_spinner=False)
 def get_services():
-    """Create long-lived service objects once per process."""
     orchestrator = DocumentOrchestrator()
     rag_agent = RAGAgent()
     db_client = SupabaseClient()
@@ -40,15 +39,12 @@ def get_services():
     return orchestrator, rag_agent, db_client, embedding_generator
 
 
-# Optional: cache DB lookups that appear in sidebar
 @st.cache_data(ttl=60, show_spinner=False)
-def get_recent_documents(db_client: "SupabaseClient", limit: int = 10):
-    return asyncio.run(db_client.get_documents_list(limit=limit))
+def get_recent_documents(_db_client: "SupabaseClient", limit: int = 10):
+    return asyncio.run(_db_client.get_documents_list(limit=limit))
 
 
 class RAGStreamlitApp:
-    """Main Streamlit application for the RAG system."""
-
     def __init__(self):
         self.orchestrator, self.rag_agent, self.db_client, self.embedding_generator = get_services()
 
@@ -59,28 +55,20 @@ class RAGStreamlitApp:
             layout="wide",
             initial_sidebar_state="expanded",
         )
-
         self._init_session_state()
         self._inject_css()
         st.title("📚 Document-Based RAG System")
         st.markdown("Upload documents and ask questions to get AI-powered answers with source attribution.")
-
         self._display_sidebar()
         self._display_main_content()
 
     def _inject_css(self):
-        # Note: Streamlit’s internal classes change over time; target testids where possible.
         st.markdown(
             """
             <style>
-            /* Wider sidebar */
             section[data-testid="stSidebar"] > div:first-child { width: 30rem !important; }
             section[data-testid="stSidebar"] { width: 30rem !important; }
-            /* Adjust main content margin */
-            .main .block-container {
-                margin-left: 31rem !important;
-                max-width: calc(100% - 32rem) !important;
-            }
+            .main .block-container { margin-left: 31rem !important; max-width: calc(100% - 32rem) !important; }
             </style>
             """,
             unsafe_allow_html=True,
@@ -94,14 +82,12 @@ class RAGStreamlitApp:
     def _display_sidebar(self):
         st.sidebar.header("📄 Document Management")
 
-        # Upload
         uploaded_files = st.sidebar.file_uploader(
             "Upload Documents",
             type=["pdf", "txt"],
             accept_multiple_files=True,
             help="Upload PDF or TXT files to add to the knowledge base",
         )
-
         if uploaded_files:
             for f in uploaded_files:
                 if f not in [d.get("file_obj") for d in st.session_state.documents]:
@@ -110,9 +96,7 @@ class RAGStreamlitApp:
                         self._process_uploaded_file(f)
                     st.sidebar.divider()
 
-        # Recent docs from DB
         st.sidebar.subheader("📚 Knowledge Base")
-
         docs: List[Dict[str, Any]] = []
         try:
             docs = get_recent_documents(self.db_client, limit=10) or []
@@ -138,7 +122,6 @@ class RAGStreamlitApp:
         except Exception as e:
             st.sidebar.error(f"Failed to load documents: {e}")
 
-        # Stats (safe even if docs fetch failed)
         st.sidebar.subheader("📊 System Stats")
         total_docs = len(docs)
         completed_docs = sum(1 for d in docs if d.get("status") == "completed")
@@ -149,7 +132,6 @@ class RAGStreamlitApp:
     def _display_main_content(self):
         st.header("💬 Ask Questions")
 
-        # Render chat history
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
@@ -160,7 +142,6 @@ class RAGStreamlitApp:
                             st.write(f"**Similarity:** {src.get('similarity', 0):.2%}")
                             st.write(f"**Content:** {src.get('content', '')[:500]}...")
 
-        # New prompt
         prompt = st.chat_input("Ask a question about your documents...")
         if prompt:
             st.session_state.messages.append({"role": "user", "content": prompt})
@@ -187,7 +168,6 @@ class RAGStreamlitApp:
             st.rerun()
 
     def _process_uploaded_file(self, uploaded_file):
-        """Process an uploaded file via the ingestion pipeline."""
         try:
             with st.spinner(f"Processing {uploaded_file.name}..."):
                 start = time.time()
@@ -221,7 +201,6 @@ class RAGStreamlitApp:
             logger.error(f"File processing error: {e}")
 
     def _process_query(self, query: str) -> Dict[str, Any]:
-        """Query the RAG agent and format response for UI."""
         try:
             start = time.time()
             response = asyncio.run(
