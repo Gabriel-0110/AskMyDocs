@@ -1,26 +1,17 @@
 name: Deploy Python app to Azure Web App - askmydocs
-
 on:
-  push:
-    branches: [ main ]
+  push: { branches: [ main ] }
   workflow_dispatch:
-
-concurrency:
-  group: askmydocs-deploy
-  cancel-in-progress: true
+concurrency: { group: askmydocs-deploy, cancel-in-progress: true }
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-
+    permissions: { id-token: write, contents: read }
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Build a slim deploy bundle (avoid venvs, caches, logs, zips, etc.)
       - name: Build deploy bundle
         shell: bash
         run: |
@@ -30,26 +21,21 @@ jobs:
             --exclude='.git' \
             --exclude='.github' \
             --exclude='.devcontainer' \
-            --exclude='.gitignore' \
-            --exclude='.gitattributes' \
             --exclude='.env' \
             --exclude='*.log' \
             --exclude='*.zip' \
-            --exclude='antenv' \
-            --exclude='venv' \
-            --exclude='.venv' \
-            --exclude='env' \
+            --exclude='venv' --exclude='.venv' --exclude='env' \
             --exclude='__pycache__' \
             --exclude='.python_packages' \
             --exclude='node_modules' \
-            --exclude='oryx-manifest.toml' \
-            --exclude='output.tar.gz' \
-            --exclude='.oryx' \
             . deploy
 
           echo 'python-3.12' > deploy/runtime.txt
+
+          # normalize and ensure executable
           sudo apt-get update -y && sudo apt-get install -y dos2unix
-          [ -f deploy/startup.sh ] && dos2unix deploy/startup.sh && chmod +x deploy/startup.sh
+          dos2unix deploy/startup.sh || true
+          chmod +x deploy/startup.sh || true
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -58,7 +44,7 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E3BB5974703147E1A26C4B4E3F50B9C3 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B26783C90B6E4A2FA6186547B80688B6 }}
 
-      - name: Deploy to Azure Web App (OneDeploy)
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: askmydocs

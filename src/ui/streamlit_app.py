@@ -1,44 +1,58 @@
 """Streamlit UI for the RAG system."""
 
-import streamlit as st
-import asyncio
-import time
-from typing import Dict, Any
-
-# Ensure absolute imports work when this file is run directly (e.g., on Streamlit Cloud)
 import sys
+import time
+import asyncio
 from pathlib import Path
+from typing import Dict, Any, List
 
+import streamlit as st
+
+# ----- Robust import path handling (works when run from repo root) -----
 try:
-    # Try an absolute import to see if path is already configured
-    from src.ingestion.orchestrator import DocumentOrchestrator  # type: ignore  # noqa: F401
+    # Try normal absolute imports
+    from src.ingestion.orchestrator import DocumentOrchestrator  # type: ignore
+    from src.generation.agent import RAGAgent  # type: ignore
+    from src.database.client import SupabaseClient  # type: ignore
+    from src.ingestion.embeddings import EmbeddingGenerator  # type: ignore
+    from src.utils.logging_config import get_logger  # type: ignore
 except ModuleNotFoundError:
-    # Add project root and src to sys.path then retry imports
-    project_root = Path(__file__).resolve().parents[2]
+    project_root = Path(__file__).resolve().parents[2]  # repo root
     sys.path.insert(0, str(project_root))
     sys.path.insert(0, str(project_root / "src"))
-
-from src.ingestion.orchestrator import DocumentOrchestrator
-from src.generation.agent import RAGAgent
-from src.database.client import SupabaseClient
-from src.ingestion.embeddings import EmbeddingGenerator
-from src.utils.logging_config import get_logger
+    from src.ingestion.orchestrator import DocumentOrchestrator  # type: ignore
+    from src.generation.agent import RAGAgent  # type: ignore
+    from src.database.client import SupabaseClient  # type: ignore
+    from src.ingestion.embeddings import EmbeddingGenerator  # type: ignore
+    from src.utils.logging_config import get_logger  # type: ignore
 
 logger = get_logger(__name__)
+
+
+# ---------- Cache heavy singletons so they don't rebuild on each run ----------
+@st.cache_resource(show_spinner=False)
+def get_services():
+    """Create long-lived service objects once per process."""
+    orchestrator = DocumentOrchestrator()
+    rag_agent = RAGAgent()
+    db_client = SupabaseClient()
+    embedding_generator = EmbeddingGenerator()
+    return orchestrator, rag_agent, db_client, embedding_generator
+
+
+# Optional: cache DB lookups that appear in sidebar
+@st.cache_data(ttl=60, show_spinner=False)
+def get_recent_documents(db_client: "SupabaseClient", limit: int = 10):
+    return asyncio.run(db_client.get_documents_list(limit=limit))
 
 
 class RAGStreamlitApp:
     """Main Streamlit application for the RAG system."""
 
     def __init__(self):
-        """Initialize the application components."""
-        self.orchestrator = DocumentOrchestrator()
-        self.rag_agent = RAGAgent()
-        self.db_client = SupabaseClient()
-        self.embedding_generator = EmbeddingGenerator()
+        self.orchestrator, self.rag_agent, self.db_client, self.embedding_generator = get_services()
 
     def run(self):
-        """Run the main Streamlit application."""
         st.set_page_config(
             page_title="RAG System",
             page_icon="📚",
@@ -46,84 +60,41 @@ class RAGStreamlitApp:
             initial_sidebar_state="expanded",
         )
 
-        # Custom CSS to make sidebar wider
+        self._init_session_state()
+        self._inject_css()
+        st.title("📚 Document-Based RAG System")
+        st.markdown("Upload documents and ask questions to get AI-powered answers with source attribution.")
+
+        self._display_sidebar()
+        self._display_main_content()
+
+    def _inject_css(self):
+        # Note: Streamlit’s internal classes change over time; target testids where possible.
         st.markdown(
             """
-        <style>
-        .css-1d391kg {
-            width: 30rem !important;
-        }
-        .css-1lcbmhc {
-            max-width: 30rem !important;
-        }
-        .css-17eq0hr {
-            width: 30rem !important;
-        }
-        /* Sidebar width for different Streamlit versions */
-        section[data-testid="stSidebar"] > div:first-child {
-            width: 30rem !important;
-        }
-        section[data-testid="stSidebar"] {
-            width: 30rem !important;
-        }
-        /* Adjust main content margin */
-        .main .block-container {
-            margin-left: 31rem !important;
-            max-width: calc(100% - 32rem) !important;
-        }
-        /* Improve sidebar content spacing */
-        .css-1d391kg .css-1v0mbdj {
-            padding-top: 1rem;
-            padding-left: 1.5rem;
-            padding-right: 1.5rem;
-        }
-        /* Make sidebar text more readable */
-        .css-1d391kg .css-1v0mbdj p {
-            font-size: 0.95rem;
-            line-height: 1.4;
-        }
-        /* Better file uploader styling */
-        .css-1d391kg .stFileUploader {
-            margin-bottom: 1rem;
-        }
-        /* Improve expander spacing */
-        .css-1d391kg .streamlit-expanderHeader {
-            font-size: 0.9rem !important;
-            padding: 0.5rem !important;
-        }
-        </style>
-        """,
+            <style>
+            /* Wider sidebar */
+            section[data-testid="stSidebar"] > div:first-child { width: 30rem !important; }
+            section[data-testid="stSidebar"] { width: 30rem !important; }
+            /* Adjust main content margin */
+            .main .block-container {
+                margin-left: 31rem !important;
+                max-width: calc(100% - 32rem) !important;
+            }
+            </style>
+            """,
             unsafe_allow_html=True,
         )
 
-        st.title("📚 Document-Based RAG System")
-        st.markdown(
-            "Upload documents and ask questions to get AI-powered answers with source attribution."
-        )
-
-        # Initialize session state
-        self._init_session_state()
-
-        # Display sidebar
-        self._display_sidebar()
-
-        # Main content area
-        self._display_main_content()
-
     def _init_session_state(self):
-        """Initialize Streamlit session state variables."""
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
-        if "documents" not in st.session_state:
-            st.session_state.documents = []
-        if "processing_status" not in st.session_state:
-            st.session_state.processing_status = {}
+        st.session_state.setdefault("messages", [])
+        st.session_state.setdefault("documents", [])
+        st.session_state.setdefault("processing_status", {})
 
     def _display_sidebar(self):
-        """Display the sidebar with document management."""
         st.sidebar.header("📄 Document Management")
 
-        # Document upload section
+        # Upload
         uploaded_files = st.sidebar.file_uploader(
             "Upload Documents",
             type=["pdf", "txt"],
@@ -132,162 +103,105 @@ class RAGStreamlitApp:
         )
 
         if uploaded_files:
-            for uploaded_file in uploaded_files:
-                if uploaded_file not in [
-                    doc.get("file_obj") for doc in st.session_state.documents
-                ]:
-                    # Use full width for better display
-                    st.sidebar.write(f"📄 **{uploaded_file.name}**")
-                    st.sidebar.write(f"📏 Size: {uploaded_file.size:,} bytes")
-                    if st.sidebar.button(
-                        "🚀 Process Document",
-                        key=f"process_{uploaded_file.name}",
-                        use_container_width=True,
-                    ):
-                        self._process_uploaded_file(uploaded_file)
+            for f in uploaded_files:
+                if f not in [d.get("file_obj") for d in st.session_state.documents]:
+                    st.sidebar.write(f"📄 **{f.name}**  —  📏 {f.size:,} bytes")
+                    if st.sidebar.button("🚀 Process Document", key=f"process_{f.name}", use_container_width=True):
+                        self._process_uploaded_file(f)
                     st.sidebar.divider()
 
-        # Display processed documents
+        # Recent docs from DB
         st.sidebar.subheader("📚 Knowledge Base")
 
-        # Get documents from database
+        docs: List[Dict[str, Any]] = []
         try:
-            documents = asyncio.run(self.db_client.get_documents_list(limit=10))
-
-            if documents:
-                for doc in documents:
-                    with st.sidebar.expander(f"📄 {doc['filename']}"):
-                        st.write(f"**Type:** {doc['file_type'].upper()}")
-                        st.write(f"**Size:** {doc['file_size']:,} bytes")
-                        st.write(f"**Status:** {doc['status'].title()}")
-                        st.write(f"**Uploaded:** {doc['upload_date'][:10]}")
-
-                        if doc["status"] == "completed":
+            docs = get_recent_documents(self.db_client, limit=10) or []
+            if docs:
+                for doc in docs:
+                    with st.sidebar.expander(f"📄 {doc.get('filename', '(unknown)')}"):
+                        st.write(f"**Type:** {doc.get('file_type', '').upper()}")
+                        st.write(f"**Size:** {doc.get('file_size', 0):,} bytes")
+                        st.write(f"**Status:** {doc.get('status', '').title()}")
+                        if doc.get("upload_date"):
+                            st.write(f"**Uploaded:** {doc['upload_date'][:10]}")
+                        status = doc.get("status")
+                        if status == "completed":
                             st.success("✅ Ready for queries")
-                        elif doc["status"] == "processing":
+                        elif status == "processing":
                             st.info("⏳ Processing...")
-                        elif doc["status"] == "error":
+                        elif status == "error":
                             st.error("❌ Processing failed")
                             if doc.get("error_message"):
                                 st.write(f"Error: {doc['error_message']}")
             else:
                 st.sidebar.info("No documents uploaded yet")
-
         except Exception as e:
             st.sidebar.error(f"Failed to load documents: {e}")
 
-        # System statistics
+        # Stats (safe even if docs fetch failed)
         st.sidebar.subheader("📊 System Stats")
-        try:
-            documents = asyncio.run(self.db_client.get_documents_list(limit=10))
-            total_docs = len(documents) if documents else 0
-            completed_docs = (
-                len([d for d in documents if d["status"] == "completed"])
-                if documents
-                else 0
-            )
-
-            # Display stats in a more readable format
-            col1, col2 = st.sidebar.columns(2)
-            with col1:
-                st.metric("Total Docs", total_docs)
-            with col2:
-                st.metric("Ready", completed_docs)
-        except Exception:
-            st.sidebar.write("Stats unavailable")
+        total_docs = len(docs)
+        completed_docs = sum(1 for d in docs if d.get("status") == "completed")
+        c1, c2 = st.sidebar.columns(2)
+        c1.metric("Total Docs", total_docs)
+        c2.metric("Ready", completed_docs)
 
     def _display_main_content(self):
-        """Display the main content area with chat interface."""
-        # Chat interface
         st.header("💬 Ask Questions")
 
-        # Display chat messages
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
-
-                if message.get("sources"):
+        # Render chat history
+        for msg in st.session_state.messages:
+            with st.chat_message(msg["role"]):
+                st.write(msg["content"])
+                if msg.get("sources"):
                     st.subheader("📑 Sources")
-                    for i, source in enumerate(message["sources"], 1):
-                        with st.expander(
-                            f"Source {i}: {source.get('source_document', 'Unknown')}"
-                        ):
-                            st.write(
-                                f"**Similarity:** {source.get('similarity', 0):.2%}"
-                            )
-                            st.write(
-                                f"**Content:** {source.get('content', '')[:500]}..."
-                            )
+                    for i, src in enumerate(msg["sources"], 1):
+                        with st.expander(f"Source {i}: {src.get('source_document', 'Unknown')}"):
+                            st.write(f"**Similarity:** {src.get('similarity', 0):.2%}")
+                            st.write(f"**Content:** {src.get('content', '')[:500]}...")
 
-        # Chat input
-        if prompt := st.chat_input("Ask a question about your documents..."):
-            # Add user message to chat
+        # New prompt
+        prompt = st.chat_input("Ask a question about your documents...")
+        if prompt:
             st.session_state.messages.append({"role": "user", "content": prompt})
-
-            # Display user message
             with st.chat_message("user"):
                 st.write(prompt)
 
-            # Process the query
             with st.chat_message("assistant"):
                 with st.spinner("Searching knowledge base and generating response..."):
-                    response = self._process_query(prompt)
-
-                # Display response
-                st.write(response["answer"])
-
-                if response.get("sources"):
+                    resp = self._process_query(prompt)
+                st.write(resp["answer"])
+                if resp.get("sources"):
                     st.subheader("📑 Sources")
-                    for i, source in enumerate(response["sources"], 1):
-                        with st.expander(
-                            f"Source {i}: {source.get('source_document', 'Unknown')}"
-                        ):
-                            st.write(
-                                f"**Similarity:** {source.get('similarity', 0):.2%}"
-                            )
-                            st.write(
-                                f"**Content:** {source.get('content', '')[:500]}..."
-                            )
+                    for i, src in enumerate(resp["sources"], 1):
+                        with st.expander(f"Source {i}: {src.get('source_document', 'Unknown')}"):
+                            st.write(f"**Similarity:** {src.get('similarity', 0):.2%}")
+                            st.write(f"**Content:** {src.get('content', '')[:500]}...")
 
-                # Add assistant response to chat
                 st.session_state.messages.append(
-                    {
-                        "role": "assistant",
-                        "content": response["answer"],
-                        "sources": response.get("sources", []),
-                    }
+                    {"role": "assistant", "content": resp["answer"], "sources": resp.get("sources", [])}
                 )
 
-        # Clear chat button
         if st.button("🗑️ Clear Chat"):
             st.session_state.messages = []
             st.rerun()
 
     def _process_uploaded_file(self, uploaded_file):
-        """Process an uploaded file through the ingestion pipeline."""
+        """Process an uploaded file via the ingestion pipeline."""
         try:
             with st.spinner(f"Processing {uploaded_file.name}..."):
-                start_time = time.time()
-
-                # Get file bytes
+                start = time.time()
                 file_bytes = uploaded_file.read()
-
-                # Process through orchestrator
                 result = asyncio.run(
                     self.orchestrator.ingest_document_from_bytes(
                         file_bytes=file_bytes, filename=uploaded_file.name
                     )
                 )
-
-                processing_time = time.time() - start_time
+                dt = time.time() - start
 
                 if result["success"]:
-                    st.success(
-                        f"✅ Successfully processed {uploaded_file.name} in {processing_time:.1f}s"
-                    )
+                    st.success(f"✅ Processed {uploaded_file.name} in {dt:.1f}s")
                     st.write(f"Created {result['chunks_created']} chunks")
-
-                    # Add to session state
                     st.session_state.documents.append(
                         {
                             "name": uploaded_file.name,
@@ -299,25 +213,17 @@ class RAGStreamlitApp:
                             "file_obj": uploaded_file,
                         }
                     )
-
-                    # Rerun to update the interface
                     st.rerun()
-
                 else:
-                    st.error(
-                        f"❌ Failed to process {uploaded_file.name}: {result.get('error', 'Unknown error')}"
-                    )
-
+                    st.error(f"❌ Failed to process {uploaded_file.name}: {result.get('error', 'Unknown error')}")
         except Exception as e:
             st.error(f"❌ Error processing {uploaded_file.name}: {e}")
             logger.error(f"File processing error: {e}")
 
     def _process_query(self, query: str) -> Dict[str, Any]:
-        """Process a user query and return the response."""
+        """Query the RAG agent and format response for UI."""
         try:
-            start_time = time.time()
-
-            # Query the RAG agent
+            start = time.time()
             response = asyncio.run(
                 self.rag_agent.query(
                     question=query,
@@ -325,38 +231,34 @@ class RAGStreamlitApp:
                     embedding_generator=self.embedding_generator,
                 )
             )
-
-            processing_time = time.time() - start_time
-
+            dt = time.time() - start
             return {
                 "answer": response.answer,
                 "sources": [
                     {
-                        "source_document": source.source_document,
-                        "content": source.content,
-                        "similarity": source.similarity,
-                        "document_id": source.document_id,
+                        "source_document": s.source_document,
+                        "content": s.content,
+                        "similarity": s.similarity,
+                        "document_id": s.document_id,
                     }
-                    for source in response.sources
+                    for s in response.sources
                 ],
                 "confidence": response.confidence,
                 "reasoning": response.reasoning,
-                "processing_time": processing_time,
+                "processing_time": dt,
             }
-
         except Exception as e:
             logger.error(f"Query processing error: {e}")
             return {
-                "answer": "I apologize, but I encountered an error while processing your question. Please try again.",
+                "answer": "I hit an error while processing your question. Please try again.",
                 "sources": [],
                 "confidence": 0.0,
-                "reasoning": f"Error: {str(e)}",
+                "reasoning": f"Error: {e}",
                 "processing_time": 0.0,
             }
 
 
 def main():
-    """Main entry point for the Streamlit app."""
     app = RAGStreamlitApp()
     app.run()
 
