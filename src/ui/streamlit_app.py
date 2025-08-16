@@ -6,10 +6,103 @@ import asyncio
 from pathlib import Path
 from typing import Dict, Any, List
 
+import os
 import streamlit as st
+# ✅ fixes Pylance: use explicit import
+import streamlit.components.v1 as components
 import warnings
 
-warnings.filterwarnings("ignore", category=SyntaxWarning, module=r"streamlit\..*")
+# =========================
+# Auth mode (portable across providers)
+# =========================
+# "azure" | "public" | "auto" | "custom"
+AUTH_MODE = os.getenv("AUTH_MODE", "auto")
+
+
+def easy_auth_enabled() -> bool:
+    if AUTH_MODE == "azure":
+        return True
+    if AUTH_MODE == "public":
+        return False
+    if AUTH_MODE == "custom":
+        return False  # extension point for non-Azure providers
+    # auto-detect Azure App Service / Easy Auth
+    return bool(os.getenv("WEBSITE_SITE_NAME") or os.getenv("WEBSITE_AUTH_ENABLED"))
+
+
+EASY_AUTH = easy_auth_enabled()
+
+LOGIN_PAGE = "/ui/login"
+LOGOUT_URL = "/.auth/logout?post_logout_redirect_uri=/ui/login"
+
+
+def inject_auth_guard():
+    """In Azure, redirect anonymous users to the custom login page."""
+    if not EASY_AUTH:
+        return
+    st.markdown(
+        f"""
+        <script>
+          (async function() {{
+            try {{
+              const r = await fetch('/.auth/me', {{credentials:'include'}});
+              if (r.ok) {{
+                const d = await r.json();
+                if (!Array.isArray(d) || d.length === 0) {{
+                  window.location.href = '{LOGIN_PAGE}';
+                }}
+              }}
+              // If 404 or not ok, do nothing (covers Streamlit Community/other hosts)
+            }} catch (e) {{
+              // network error? keep page (don’t hard fail)
+            }}
+          }})();
+        </script>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_user_badge():
+    """Sidebar badge with email/provider + logout (shown only when auth is on)."""
+    if not EASY_AUTH:
+        return
+    st.sidebar.markdown("### 👤 Sessão")
+    components.html(
+        """
+        <div id="userbox" style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;">
+          <div id="who" style="color:#ddd; font-size:14px;">Carregando usuário…</div>
+          <div style="margin-top:6px;">
+            <a href="/.auth/logout?post_logout_redirect_uri=/ui/login" style="color:#9bd; text-decoration:none;">Sair</a>
+          </div>
+        </div>
+        <script>
+          (async function() {
+            try {
+              const r = await fetch('/.auth/me', {credentials:'include'});
+              if (!r.ok) return;  // in public mode there's no /.auth
+              const data = await r.json();
+              const box = document.getElementById('who');
+              if (Array.isArray(data) && data.length > 0) {
+                const claims = data[0].user_claims || [];
+                const emailClaim = claims.find(c => c.typ === 'email')
+                                  || claims.find(c => (c.typ||'').toLowerCase().includes('name'));
+                const email = (emailClaim && emailClaim.val) || 'Usuário autenticado';
+                const provider = (data[0].identity_provider || 'Conta').replace(/^.*\\//,'');
+                box.textContent = email + ' · ' + provider;
+              } else {
+                box.textContent = 'Não autenticado';
+              }
+            } catch(e) {}
+          })();
+        </script>
+        """,
+        height=84,
+    )
+
+
+warnings.filterwarnings("ignore", category=SyntaxWarning,
+                        module=r"streamlit\..*")
 
 # ----- Robust import path handling (works when run from repo root) -----
 try:
@@ -59,11 +152,14 @@ class RAGStreamlitApp:
             initial_sidebar_state="expanded",
         )
         self._init_session_state()
+        inject_auth_guard()  # ✅ enforce auth (no-op outside Azure)
         self._inject_css()
+
         st.title("📚 Document-Based RAG System")
         st.markdown(
             "Upload documents and ask questions to get AI-powered answers with source attribution."
         )
+
         self._display_sidebar()
         self._display_main_content()
 
@@ -85,6 +181,8 @@ class RAGStreamlitApp:
         st.session_state.setdefault("processing_status", {})
 
     def _display_sidebar(self):
+        render_user_badge()  # ✅ show user + logout when auth is enabled
+
         st.sidebar.header("📄 Document Management")
 
         uploaded_files = st.sidebar.file_uploader(
@@ -112,11 +210,15 @@ class RAGStreamlitApp:
             if docs:
                 for doc in docs:
                     with st.sidebar.expander(f"📄 {doc.get('filename', '(unknown)')}"):
-                        st.write(f"**Type:** {doc.get('file_type', '').upper()}")
-                        st.write(f"**Size:** {doc.get('file_size', 0):,} bytes")
-                        st.write(f"**Status:** {doc.get('status', '').title()}")
+                        st.write(
+                            f"**Type:** {doc.get('file_type', '').upper()}")
+                        st.write(
+                            f"**Size:** {doc.get('file_size', 0):,} bytes")
+                        st.write(
+                            f"**Status:** {doc.get('status', '').title()}")
                         if doc.get("upload_date"):
-                            st.write(f"**Uploaded:** {doc['upload_date'][:10]}")
+                            st.write(
+                                f"**Uploaded:** {doc['upload_date'][:10]}")
                         status = doc.get("status")
                         if status == "completed":
                             st.success("✅ Ready for queries")
@@ -150,12 +252,15 @@ class RAGStreamlitApp:
                         with st.expander(
                             f"Source {i}: {src.get('source_document', 'Unknown')}"
                         ):
-                            st.write(f"**Similarity:** {src.get('similarity', 0):.2%}")
-                            st.write(f"**Content:** {src.get('content', '')[:500]}...")
+                            st.write(
+                                f"**Similarity:** {src.get('similarity', 0):.2%}")
+                            st.write(
+                                f"**Content:** {src.get('content', '')[:500]}...")
 
         prompt = st.chat_input("Ask a question about your documents...")
         if prompt:
-            st.session_state.messages.append({"role": "user", "content": prompt})
+            st.session_state.messages.append(
+                {"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.write(prompt)
 
@@ -169,8 +274,10 @@ class RAGStreamlitApp:
                         with st.expander(
                             f"Source {i}: {src.get('source_document', 'Unknown')}"
                         ):
-                            st.write(f"**Similarity:** {src.get('similarity', 0):.2%}")
-                            st.write(f"**Content:** {src.get('content', '')[:500]}...")
+                            st.write(
+                                f"**Similarity:** {src.get('similarity', 0):.2%}")
+                            st.write(
+                                f"**Content:** {src.get('content', '')[:500]}...")
 
                 st.session_state.messages.append(
                     {
@@ -197,7 +304,8 @@ class RAGStreamlitApp:
                 dt = time.time() - start
 
                 if result["success"]:
-                    st.success(f"✅ Processed {uploaded_file.name} in {dt:.1f}s")
+                    st.success(
+                        f"✅ Processed {uploaded_file.name} in {dt:.1f}s")
                     st.write(f"Created {result['chunks_created']} chunks")
                     st.session_state.documents.append(
                         {
