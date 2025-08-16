@@ -91,4 +91,5 @@ app.zip
 # artifacts
 *.zip
 .python_packages/
+secrets.toml
 

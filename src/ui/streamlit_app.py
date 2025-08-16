@@ -8,6 +8,7 @@ from typing import Dict, Any, List
 
 import streamlit as st
 import warnings
+
 warnings.filterwarnings("ignore", category=SyntaxWarning, module=r"streamlit\..*")
 
 # ----- Robust import path handling (works when run from repo root) -----
@@ -46,7 +47,9 @@ def get_recent_documents(_db_client: "SupabaseClient", limit: int = 10):
 
 class RAGStreamlitApp:
     def __init__(self):
-        self.orchestrator, self.rag_agent, self.db_client, self.embedding_generator = get_services()
+        self.orchestrator, self.rag_agent, self.db_client, self.embedding_generator = (
+            get_services()
+        )
 
     def run(self):
         st.set_page_config(
@@ -58,7 +61,9 @@ class RAGStreamlitApp:
         self._init_session_state()
         self._inject_css()
         st.title("📚 Document-Based RAG System")
-        st.markdown("Upload documents and ask questions to get AI-powered answers with source attribution.")
+        st.markdown(
+            "Upload documents and ask questions to get AI-powered answers with source attribution."
+        )
         self._display_sidebar()
         self._display_main_content()
 
@@ -92,7 +97,11 @@ class RAGStreamlitApp:
             for f in uploaded_files:
                 if f not in [d.get("file_obj") for d in st.session_state.documents]:
                     st.sidebar.write(f"📄 **{f.name}**  —  📏 {f.size:,} bytes")
-                    if st.sidebar.button("🚀 Process Document", key=f"process_{f.name}", use_container_width=True):
+                    if st.sidebar.button(
+                        "🚀 Process Document",
+                        key=f"process_{f.name}",
+                        use_container_width=True,
+                    ):
                         self._process_uploaded_file(f)
                     st.sidebar.divider()
 
@@ -138,7 +147,9 @@ class RAGStreamlitApp:
                 if msg.get("sources"):
                     st.subheader("📑 Sources")
                     for i, src in enumerate(msg["sources"], 1):
-                        with st.expander(f"Source {i}: {src.get('source_document', 'Unknown')}"):
+                        with st.expander(
+                            f"Source {i}: {src.get('source_document', 'Unknown')}"
+                        ):
                             st.write(f"**Similarity:** {src.get('similarity', 0):.2%}")
                             st.write(f"**Content:** {src.get('content', '')[:500]}...")
 
@@ -155,12 +166,18 @@ class RAGStreamlitApp:
                 if resp.get("sources"):
                     st.subheader("📑 Sources")
                     for i, src in enumerate(resp["sources"], 1):
-                        with st.expander(f"Source {i}: {src.get('source_document', 'Unknown')}"):
+                        with st.expander(
+                            f"Source {i}: {src.get('source_document', 'Unknown')}"
+                        ):
                             st.write(f"**Similarity:** {src.get('similarity', 0):.2%}")
                             st.write(f"**Content:** {src.get('content', '')[:500]}...")
 
                 st.session_state.messages.append(
-                    {"role": "assistant", "content": resp["answer"], "sources": resp.get("sources", [])}
+                    {
+                        "role": "assistant",
+                        "content": resp["answer"],
+                        "sources": resp.get("sources", []),
+                    }
                 )
 
         if st.button("🗑️ Clear Chat"):
@@ -195,7 +212,9 @@ class RAGStreamlitApp:
                     )
                     st.rerun()
                 else:
-                    st.error(f"❌ Failed to process {uploaded_file.name}: {result.get('error', 'Unknown error')}")
+                    st.error(
+                        f"❌ Failed to process {uploaded_file.name}: {result.get('error', 'Unknown error')}"
+                    )
         except Exception as e:
             st.error(f"❌ Error processing {uploaded_file.name}: {e}")
             logger.error(f"File processing error: {e}")
