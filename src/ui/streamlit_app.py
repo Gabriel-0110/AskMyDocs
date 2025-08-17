@@ -5,7 +5,7 @@ import time
 import asyncio
 from pathlib import Path
 from typing import Dict, Any, List
-from streamlit_app import EASY_AUTH
+from auth_config import EASY_AUTH
 
 import os
 import streamlit as st
