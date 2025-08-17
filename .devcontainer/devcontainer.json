@@ -1,24 +1,33 @@
 {
-  "name": "AskMyDocs (Python 3.12)",
+  "name": "AskMyDocs (Python 3.12 + uv)",
   "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
 
   "customizations": {
     "codespaces": {
-      "openFiles": ["README.md", "streamlit_app.py"]
+      "openFiles": ["README.md", "src/ui/streamlit_app.py"]
     },
     "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+        "python.terminal.activateEnvironment": true
+      },
       "extensions": [
         "ms-python.python",
-        "ms-python.vscode-pylance"
+        "ms-python.vscode-pylance",
+        "astral-sh.uv"              // uv VS Code extension (optional, nice)
       ]
     }
   },
 
-  "postCreateCommand": "pip install -U pip && pip install -r requirements.txt",
-  "updateContentCommand": "[ -f requirements.txt ] && pip install -r requirements.txt || true",
+  // Install uv and create project venv on Python 3.12; install deps from pyproject/uv.lock
+  "postCreateCommand": "python3 -m pip install -U pip uv && uv sync --frozen --python 3.12",
 
+  // Keep dependencies synced when repo content changes (falls back to non-frozen if lock isn't current)
+  "updateContentCommand": "if ! command -v uv >/dev/null 2>&1; then python3 -m pip install -U uv; fi; uv sync --frozen || uv sync",
+
+  // Run Streamlit with the venv Python
   "postAttachCommand": {
-    "server": "streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port 8501"
+  "server": "${containerWorkspaceFolder}/.venv/bin/python -m streamlit run src/ui/streamlit_app.py --server.address 0.0.0.0 --server.port 8501"
   },
 
   "portsAttributes": {
