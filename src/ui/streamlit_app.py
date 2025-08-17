@@ -5,6 +5,7 @@ import time
 import asyncio
 from pathlib import Path
 from typing import Dict, Any, List
+from streamlit_app import EASY_AUTH
 
 import os
 import streamlit as st
@@ -37,6 +38,12 @@ LOGOUT_URL = "/.auth/logout?post_logout_redirect_uri=/ui/login"
 
 
 def inject_auth_guard():
+
+    if EASY_AUTH:
+        st.markdown("""... your /.auth login buttons ...""", unsafe_allow_html=True)
+    else:
+        st.info("🔓 Public mode: no login required here")
+
     """In Azure, redirect anonymous users to the custom login page."""
     if not EASY_AUTH:
         return
