@@ -18,7 +18,7 @@
   "updateContentCommand": "[ -f requirements.txt ] && pip install -r requirements.txt || true",
 
   "postAttachCommand": {
-    "server": "streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port 8501"
+    "server": "python -m streamlit run src/ui/streamlit_app.py --server.address 0.0.0.0 --server.port 8501"
   },
 
   "portsAttributes": {
