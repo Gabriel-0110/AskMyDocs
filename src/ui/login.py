@@ -1,6 +1,13 @@
 # ui/login.py
 import urllib.parse as _url
 import streamlit as st
+from auth_config import EASY_AUTH
+
+if EASY_AUTH:
+    st.markdown("""... your /.auth login buttons ...""",
+                unsafe_allow_html=True)
+else:
+    st.info("🔓 Public mode: no login required here")
 
 # =========================
 # CONFIG BÁSICA
