@@ -128,7 +128,7 @@ if EASY_AUTH:
           </div>
           <p class="muted">Sign in to continue. Your data is protected via Azure App Service Authentication.</p>
 
-          <a class="btn microsoft" href="/.auth/login/microsoft?post_login_redirect_url={_url.quote(REDIRECT_AFTER_LOGIN)}">
+          <a class="btn microsoft" href="/.auth/login/aad?post_login_redirect_url={_url.quote(REDIRECT_AFTER_LOGIN)}">
             <svg width="20" height="20" viewBox="0 0 23 23" fill="currentColor">
               <path d="M1 1h10v10H1V1zm11 0h10v10H12V1zM1 12h10v10H1V12zm11 0h10v10H12V12z"/>
             </svg>

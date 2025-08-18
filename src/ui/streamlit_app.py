@@ -34,7 +34,7 @@ def easy_auth_enabled() -> bool:
 EASY_AUTH = easy_auth_enabled()
 
 LOGIN_PAGE = "/ui/login"
-LOGOUT_URL = "/.auth/logout?post_logout_redirect_uri=/ui/login"
+LOGOUT_URL = "/ui/logout"
 
 
 def inject_auth_guard():
@@ -77,7 +77,7 @@ def render_user_badge():
         <div id="userbox" style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;">
           <div id="who" style="color:#ddd; font-size:14px;">Loading user...</div>
           <div style="margin-top:6px;">
-            <a href="/.auth/logout?post_logout_redirect_uri=/ui/login" style="color:#4fc3f7; text-decoration:none;">Sign out</a>
+            <a href="/ui/logout" style="color:#4fc3f7; text-decoration:none;">Sign out</a>
           </div>
         </div>
         <script>
