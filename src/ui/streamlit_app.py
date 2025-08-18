@@ -41,7 +41,10 @@ def inject_auth_guard():
     """In Azure, redirect anonymous users to the custom login page."""
     if not EASY_AUTH:
         return
-    st.markdown(
+    
+    # Use components.html with height=0 to make it invisible
+    import streamlit.components.v1 as components
+    components.html(
         f"""
         <script>
           (async function() {{
@@ -60,7 +63,7 @@ def inject_auth_guard():
           }})();
         </script>
         """,
-        unsafe_allow_html=True,
+        height=0,
     )
 
 
