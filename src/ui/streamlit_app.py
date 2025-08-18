@@ -38,13 +38,6 @@ LOGOUT_URL = "/.auth/logout?post_logout_redirect_uri=/ui/login"
 
 
 def inject_auth_guard():
-
-    if EASY_AUTH:
-        st.markdown("""... your /.auth login buttons ...""",
-                    unsafe_allow_html=True)
-    else:
-        st.info("🔓 Public mode: no login required here")
-
     """In Azure, redirect anonymous users to the custom login page."""
     if not EASY_AUTH:
         return
@@ -62,7 +55,7 @@ def inject_auth_guard():
               }}
               // If 404 or not ok, do nothing (covers Streamlit Community/other hosts)
             }} catch (e) {{
-              // network error? keep page (don’t hard fail)
+              // network error? keep page (don't hard fail)
             }}
           }})();
         </script>
