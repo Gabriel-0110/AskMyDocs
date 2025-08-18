@@ -68,13 +68,13 @@ def render_user_badge():
     """Sidebar badge with email/provider + logout (shown only when auth is on)."""
     if not EASY_AUTH:
         return
-    st.sidebar.markdown("### 👤 Sessão")
+    st.sidebar.markdown("### 👤 Session")
     components.html(
         """
         <div id="userbox" style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;">
-          <div id="who" style="color:#ddd; font-size:14px;">Carregando usuário…</div>
+          <div id="who" style="color:#ddd; font-size:14px;">Loading user...</div>
           <div style="margin-top:6px;">
-            <a href="/.auth/logout?post_logout_redirect_uri=/ui/login" style="color:#9bd; text-decoration:none;">Sair</a>
+            <a href="/.auth/logout?post_logout_redirect_uri=/ui/login" style="color:#4fc3f7; text-decoration:none;">Sign out</a>
           </div>
         </div>
         <script>
@@ -88,11 +88,11 @@ def render_user_badge():
                 const claims = data[0].user_claims || [];
                 const emailClaim = claims.find(c => c.typ === 'email')
                                   || claims.find(c => (c.typ||'').toLowerCase().includes('name'));
-                const email = (emailClaim && emailClaim.val) || 'Usuário autenticado';
-                const provider = (data[0].identity_provider || 'Conta').replace(/^.*\\//,'');
+                const email = (emailClaim && emailClaim.val) || 'Authenticated user';
+                const provider = (data[0].identity_provider || 'Account').replace(/^.*\\//,'');
                 box.textContent = email + ' · ' + provider;
               } else {
-                box.textContent = 'Não autenticado';
+                box.textContent = 'Not authenticated';
               }
             } catch(e) {}
           })();
@@ -168,9 +168,67 @@ class RAGStreamlitApp:
         st.markdown(
             """
             <style>
+            /* Sidebar styling */
             section[data-testid="stSidebar"] > div:first-child { width: 30rem !important; }
             section[data-testid="stSidebar"] { width: 30rem !important; }
             .main .block-container { margin-left: 31rem !important; max-width: calc(100% - 32rem) !important; }
+            
+            /* Enhanced main content styling */
+            .main .block-container {
+                padding-top: 2rem;
+                padding-bottom: 2rem;
+            }
+            
+            /* Chat input styling */
+            .stChatInput > div > div > textarea {
+                background-color: #262730 !important;
+                border: 1px solid #404040 !important;
+                border-radius: 10px !important;
+                color: #ffffff !important;
+            }
+            
+            /* Chat messages styling */
+            .stChatMessage {
+                background-color: #1e1e1e !important;
+                border-radius: 10px !important;
+                border: 1px solid #333 !important;
+                margin: 0.5rem 0 !important;
+            }
+            
+            /* Button styling */
+            .stButton > button {
+                background-color: #2b2b2b !important;
+                color: #ffffff !important;
+                border: 1px solid #404040 !important;
+                border-radius: 8px !important;
+                transition: background-color 0.2s ease !important;
+            }
+            
+            .stButton > button:hover {
+                background-color: #383838 !important;
+                border-color: #555 !important;
+            }
+            
+            /* File uploader styling */
+            .stFileUploader > div > div {
+                background-color: #262730 !important;
+                border: 2px dashed #404040 !important;
+                border-radius: 10px !important;
+            }
+            
+            /* Expander styling */
+            .streamlit-expanderHeader {
+                background-color: #2b2b2b !important;
+                border-radius: 8px !important;
+            }
+            
+            /* Metrics styling */
+            [data-testid="metric-container"] {
+                background-color: #2b2b2b !important;
+                border: 1px solid #404040 !important;
+                padding: 1rem !important;
+                border-radius: 8px !important;
+            }
             </style>
             """,
             unsafe_allow_html=True,
